@@ -259,20 +259,87 @@ int runRepl()
   printf("\\\\/\"-\n");
   printf(" \\_/   wren v0.0.0\n");
 
+  const char PRE[] = "System.print(";
+
+  char code[MAX_LINE_LENGTH];
   char line[MAX_LINE_LENGTH];
+  int multiline = 0;
+  int printmode = 0;
 
   for (;;)
   {
-    printf("> ");
+    printf(multiline ? ">> " : "> ");
+    
+    if ( !multiline ) {
+      code[0] = '\0';
+    }
 
     if (!fgets(line, MAX_LINE_LENGTH, stdin))
     {
-      printf("\n");
-      break;
+      printf("Input buffer overflow\n");
+      multiline = 0;
+      printmode = 0;
+      continue;	
+    }
+
+    if ( !strcmp(line, "\n")) 
+    {
+      continue;
+    }
+		
+    int len = strlen(line);
+
+    if ( line[len-2] == '\\' ) 
+    {
+      multiline = 1;
+      line[len-2] = '\0';
+      if ( !multiline && line[0] == '=' ) {
+        sprintf(code, PRE);
+				if ( strlen(code) + len + 1 > MAX_LINE_LENGTH ) {
+          printf("Input buffer overflow\n");
+          multiline = 0;
+          printmode = 0;
+          continue;	
+        }
+        strcat( code, line + 1 );
+        printmode = 1;
+      }
+      else
+      {
+        strcat( code, line );
+      }
+      continue;
+    } 	 	
+    else 
+    {
+      if ( !multiline && line[0] == '=' ) {
+        sprintf( code, PRE );
+				if ( strlen(code) + len + 1 > MAX_LINE_LENGTH ) {
+          printf("Input buffer overflow\n");
+          multiline = 0;
+          printmode = 0;
+          continue;	
+        }
+        strcat( code, line + 1 );
+        strcat( code, ")" );
+      }
+      else
+      {
+				if ( strlen(code) + len + 1 > MAX_LINE_LENGTH ) {
+          printf("Input buffer overflow\n");
+          multiline = 0;
+          printmode = 0;
+          continue;	
+        }
+        multiline = 0;
+        line[len-1] = '\0';
+        strcat( code, line );
+      }
+      printmode = 0;
     }
 
     // TODO: Handle failure.
-    wrenInterpret(vm, line);
+    wrenInterpret(vm, code);
 
     // TODO: Automatically print the result of expressions.
   }
